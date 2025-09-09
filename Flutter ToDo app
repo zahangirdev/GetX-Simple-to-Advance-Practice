@@ -1,0 +1,118 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+// --- Controller ---
+class TodoController extends GetxController {
+  var todos = <String>[].obs; // Observable list
+  var completed = <bool>[].obs;
+
+  void addTodo(String task) {
+    if (task.isNotEmpty) {
+      todos.add(task);
+      completed.add(false);
+    }
+  }
+
+  void toggleComplete(int index) {
+    completed[index] = !completed[index];
+  }
+
+  void removeTodo(int index) {
+    todos.removeAt(index);
+    completed.removeAt(index);
+  }
+}
+
+// --- Main App ---
+void main() {
+  runApp(const TodoApp());
+}
+
+class TodoApp extends StatelessWidget {
+  const TodoApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GetMaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Simple GetX Todo',
+      home: TodoHome(),
+    );
+  }
+}
+
+// --- UI ---
+class TodoHome extends StatelessWidget {
+  final TodoController todoController = Get.put(TodoController());
+  final TextEditingController textController = TextEditingController();
+
+  TodoHome({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("GetX Todo App")),
+      body: Column(
+        children: [
+          // Input Field
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: textController,
+                    decoration: const InputDecoration(
+                      hintText: "Enter a task",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    todoController.addTodo(textController.text);
+                    textController.clear();
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // Todo List
+          Expanded(
+            child: Obx(
+              () => ListView.builder(
+                itemCount: todoController.todos.length,
+                itemBuilder: (context, index) {
+                  return Card(
+                    child: ListTile(
+                      leading: Checkbox(
+                        value: todoController.completed[index],
+                        onChanged: (_) {
+                          todoController.toggleComplete(index);
+                        },
+                      ),
+                      title: Text(
+                        todoController.todos[index],
+                        style: TextStyle(
+                          decoration: todoController.completed[index]
+                              ? TextDecoration.lineThrough
+                              : TextDecoration.none,
+                        ),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => todoController.removeTodo(index),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
