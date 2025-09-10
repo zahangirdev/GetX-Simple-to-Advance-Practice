@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-// Model
+// Blog Model
 class Blog {
   String title;
   String content;
-
   Blog({required this.title, required this.content});
 }
 
-// Controller
+// Blog Controller using GetX
 class BlogController extends GetxController {
   var blogs = <Blog>[].obs;
 
@@ -35,109 +34,140 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      title: "Simple Blog App",
-      home: BlogPage(),
+      title: "Kids Blog",
+      theme: ThemeData(
+        primarySwatch: Colors.purple,
+      ),
+      home: const BlogHome(),
     );
   }
 }
 
-// Home Page
-class BlogPage extends StatelessWidget {
-  final BlogController blogController = Get.put(BlogController());
-
-  final TextEditingController titleController = TextEditingController();
-  final TextEditingController contentController = TextEditingController();
-
-  BlogPage({super.key});
-
-  void showBlogDialog({int? index}) {
-    if (index != null) {
-      titleController.text = blogController.blogs[index].title;
-      contentController.text = blogController.blogs[index].content;
-    } else {
-      titleController.clear();
-      contentController.clear();
-    }
-
-    Get.defaultDialog(
-      title: index == null ? "Add Blog" : "Edit Blog",
-      content: Column(
-        children: [
-          TextField(
-            controller: titleController,
-            decoration: const InputDecoration(labelText: "Title"),
-          ),
-          TextField(
-            controller: contentController,
-            decoration: const InputDecoration(labelText: "Content"),
-          ),
-        ],
-      ),
-      textCancel: "Cancel",
-      textConfirm: index == null ? "Add" : "Update",
-      onConfirm: () {
-        if (titleController.text.isNotEmpty &&
-            contentController.text.isNotEmpty) {
-          if (index == null) {
-            blogController.addBlog(
-              titleController.text,
-              contentController.text,
-            );
-          } else {
-            blogController.updateBlog(
-              index,
-              titleController.text,
-              contentController.text,
-            );
-          }
-          Get.back();
-        }
-      },
-    );
-  }
+// Home Screen
+class BlogHome extends StatelessWidget {
+  const BlogHome({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final BlogController blogController = Get.put(BlogController());
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Simple Blog App"),
+        title: const Text("Kids Blog App ✨"),
+        backgroundColor: Colors.purple,
       ),
-      body: Obx(
-        () => ListView.builder(
-          itemCount: blogController.blogs.length,
-          itemBuilder: (context, index) {
-            final blog = blogController.blogs[index];
-            return Card(
-              margin: const EdgeInsets.all(8),
-              child: ListTile(
-                title: Text(blog.title),
-                subtitle: Text(blog.content),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () => showBlogDialog(index: index),
+      body: Obx(() => blogController.blogs.isEmpty
+          ? const Center(
+              child: Text("No Blog Posts Yet 📝",
+                  style: TextStyle(fontSize: 20, color: Colors.grey)))
+          : ListView.builder(
+              itemCount: blogController.blogs.length,
+              itemBuilder: (context, index) {
+                final blog = blogController.blogs[index];
+                return Card(
+                  color: Colors.purple[100],
+                  margin: const EdgeInsets.all(10),
+                  child: ListTile(
+                    title: Text(blog.title,
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    subtitle: Text(blog.content),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          onPressed: () {
+                            Get.to(() => BlogForm(
+                                isEdit: true, index: index, blog: blog));
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            blogController.deleteBlog(index);
+                          },
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => blogController.deleteBlog(index),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
+                  ),
+                );
+              },
+            )),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.purple,
+        onPressed: () {
+          Get.to(() => const BlogForm(isEdit: false));
+        },
         child: const Icon(Icons.add),
-        onPressed: () => showBlogDialog(),
+      ),
+    );
+  }
+}
+
+// Blog Form (Add & Edit)
+class BlogForm extends StatelessWidget {
+  final bool isEdit;
+  final int? index;
+  final Blog? blog;
+
+  const BlogForm({super.key, required this.isEdit, this.index, this.blog});
+
+  @override
+  Widget build(BuildContext context) {
+    final BlogController blogController = Get.find();
+    final TextEditingController titleController =
+        TextEditingController(text: isEdit ? blog?.title : "");
+    final TextEditingController contentController =
+        TextEditingController(text: isEdit ? blog?.content : "");
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(isEdit ? "Edit Blog 🖊️" : "Add Blog ✨"),
+        backgroundColor: Colors.purple,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                  labelText: "Title", border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: contentController,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                  labelText: "Content", border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+              ),
+              onPressed: () {
+                if (isEdit && index != null) {
+                  blogController.updateBlog(
+                      index!, titleController.text, contentController.text);
+                } else {
+                  blogController.addBlog(
+                      titleController.text, contentController.text);
+                }
+                Get.back();
+              },
+              child: Text(isEdit ? "Update Blog ✅" : "Add Blog 📝",
+                  style: const TextStyle(fontSize: 18)),
+            )
+          ],
+        ),
       ),
     );
   }
