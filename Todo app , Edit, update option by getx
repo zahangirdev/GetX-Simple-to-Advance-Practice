@@ -1,0 +1,149 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+// Model
+class Todo {
+  String title;
+  bool isDone;
+  Todo({
+    required this.title,
+    this.isDone = false,
+  });
+}
+
+// Controller
+class TodoController extends GetxController {
+  var todos = <Todo>[].obs;
+
+  void addTodo(String title) {
+    todos.add(Todo(title: title));
+  }
+
+  void toggleDone(int index) {
+    todos[index].isDone = !todos[index].isDone;
+    todos.refresh();
+  }
+
+  void deleteTodo(int index) {
+    todos.removeAt(index);
+  }
+
+  void updateTodo(int index, String newTitle) {
+    todos[index].title = newTitle;
+    todos.refresh();
+  }
+}
+
+// Main App
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GetMaterialApp(
+      title: 'GetX Todo App',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: TodoPage(),
+    );
+  }
+}
+
+class TodoPage extends StatelessWidget {
+  TodoPage({super.key});
+
+  final TodoController todoController = Get.put(TodoController());
+  final TextEditingController textController = TextEditingController();
+
+  void _showEditDialog(int index) {
+    textController.text = todoController.todos[index].title;
+    Get.defaultDialog(
+      title: "Edit Todo",
+      content: TextField(controller: textController),
+      textConfirm: "Update",
+      textCancel: "Cancel",
+      onConfirm: () {
+        if (textController.text.trim().isNotEmpty) {
+          todoController.updateTodo(index, textController.text.trim());
+        }
+        Get.back();
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("GetX Todo App")),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: textController,
+                    decoration: const InputDecoration(
+                      hintText: "Enter todo",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    if (textController.text.trim().isNotEmpty) {
+                      todoController.addTodo(textController.text.trim());
+                      textController.clear();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Obx(() => ListView.builder(
+                  itemCount: todoController.todos.length,
+                  itemBuilder: (context, index) {
+                    final todo = todoController.todos[index];
+                    return ListTile(
+                      title: Text(
+                        todo.title,
+                        style: TextStyle(
+                          decoration: todo.isDone
+                              ? TextDecoration.lineThrough
+                              : TextDecoration.none,
+                        ),
+                      ),
+                      leading: Checkbox(
+                        value: todo.isDone,
+                        onChanged: (value) {
+                          todoController.toggleDone(index);
+                        },
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.green),
+                            onPressed: () => _showEditDialog(index),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => todoController.deleteTodo(index),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                )),
+          ),
+        ],
+      ),
+    );
+  }
+}
