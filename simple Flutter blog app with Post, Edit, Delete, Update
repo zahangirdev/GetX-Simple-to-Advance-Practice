@@ -1,0 +1,144 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+// Model
+class Blog {
+  String title;
+  String content;
+
+  Blog({required this.title, required this.content});
+}
+
+// Controller
+class BlogController extends GetxController {
+  var blogs = <Blog>[].obs;
+
+  void addBlog(String title, String content) {
+    blogs.add(Blog(title: title, content: content));
+  }
+
+  void updateBlog(int index, String title, String content) {
+    blogs[index].title = title;
+    blogs[index].content = content;
+    blogs.refresh();
+  }
+
+  void deleteBlog(int index) {
+    blogs.removeAt(index);
+  }
+}
+
+// Main App
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GetMaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: "Simple Blog App",
+      home: BlogPage(),
+    );
+  }
+}
+
+// Home Page
+class BlogPage extends StatelessWidget {
+  final BlogController blogController = Get.put(BlogController());
+
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController contentController = TextEditingController();
+
+  BlogPage({super.key});
+
+  void showBlogDialog({int? index}) {
+    if (index != null) {
+      titleController.text = blogController.blogs[index].title;
+      contentController.text = blogController.blogs[index].content;
+    } else {
+      titleController.clear();
+      contentController.clear();
+    }
+
+    Get.defaultDialog(
+      title: index == null ? "Add Blog" : "Edit Blog",
+      content: Column(
+        children: [
+          TextField(
+            controller: titleController,
+            decoration: const InputDecoration(labelText: "Title"),
+          ),
+          TextField(
+            controller: contentController,
+            decoration: const InputDecoration(labelText: "Content"),
+          ),
+        ],
+      ),
+      textCancel: "Cancel",
+      textConfirm: index == null ? "Add" : "Update",
+      onConfirm: () {
+        if (titleController.text.isNotEmpty &&
+            contentController.text.isNotEmpty) {
+          if (index == null) {
+            blogController.addBlog(
+              titleController.text,
+              contentController.text,
+            );
+          } else {
+            blogController.updateBlog(
+              index,
+              titleController.text,
+              contentController.text,
+            );
+          }
+          Get.back();
+        }
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Simple Blog App"),
+      ),
+      body: Obx(
+        () => ListView.builder(
+          itemCount: blogController.blogs.length,
+          itemBuilder: (context, index) {
+            final blog = blogController.blogs[index];
+            return Card(
+              margin: const EdgeInsets.all(8),
+              child: ListTile(
+                title: Text(blog.title),
+                subtitle: Text(blog.content),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () => showBlogDialog(index: index),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => blogController.deleteBlog(index),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
+        onPressed: () => showBlogDialog(),
+      ),
+    );
+  }
+}
